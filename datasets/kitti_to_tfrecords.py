@@ -79,7 +79,7 @@ def _process_image(directory, name, f_png_image_shape,
     """
     # Read the PNG image file.
     filename = os.path.join(directory, image_dir, name + '.png')
-    image_data = tf.gfile.FastGFile(filename, 'r').read()
+    image_data = tf.gfile.FastGFile(filename, 'rb').read()
     shape = list(f_png_image_shape(image_data))
 
     # Get object annotations.

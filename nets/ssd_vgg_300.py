@@ -550,7 +550,7 @@ def ssd_losses(logits, localisations,
                 nmask = tf.logical_and(tf.logical_not(pmask),
                                        gscores[i] > -0.5)
                 fnmask = tf.cast(nmask, dtype)
-                nvalues = tf.select(nmask,
+                nvalues = tf.where(nmask,
                                     predictions[:, :, :, :, 0],
                                     1. - fnmask)
                 nvalues_flat = tf.reshape(nvalues, [-1])
@@ -569,14 +569,14 @@ def ssd_losses(logits, localisations,
 
                 # Add cross-entropy loss.
                 with tf.name_scope('cross_entropy_pos'):
-                    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits[i],
-                                                                          gclasses[i])
+                    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits[i],
+                                                                          labels=gclasses[i])
                     loss = tf.contrib.losses.compute_weighted_loss(loss, fpmask)
                     l_cross_pos.append(loss)
 
                 with tf.name_scope('cross_entropy_neg'):
-                    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits[i],
-                                                                          no_classes)
+                    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits[i],
+                                                                          labels=no_classes)
                     loss = tf.contrib.losses.compute_weighted_loss(loss, fnmask)
                     l_cross_neg.append(loss)
 

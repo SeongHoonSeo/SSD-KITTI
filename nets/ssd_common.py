@@ -116,7 +116,7 @@ def tf_ssd_bboxes_encode_layer(labels,
         fmask = tf.cast(mask, dtype)
         # Update values using mask.
         feat_labels = imask * label + (1 - imask) * feat_labels
-        feat_scores = tf.select(mask, jaccard, feat_scores)
+        feat_scores = tf.where(mask, jaccard, feat_scores)
 
         feat_ymin = fmask * bbox[0] + (1 - fmask) * feat_ymin
         feat_xmin = fmask * bbox[1] + (1 - fmask) * feat_xmin
@@ -128,7 +128,7 @@ def tf_ssd_bboxes_encode_layer(labels,
         mask = tf.logical_and(interscts > ignore_threshold,
                               label == no_annotation_label)
         # Replace scores by -1.
-        feat_scores = tf.select(mask, -tf.cast(mask, dtype), feat_scores)
+        feat_scores = tf.where(mask, -tf.cast(mask, dtype), feat_scores)
 
         return [i+1, feat_labels, feat_scores,
                 feat_ymin, feat_xmin, feat_ymax, feat_xmax]
