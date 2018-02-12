@@ -1,3 +1,43 @@
+# SSD on KITTI DataSet
+
+## Regarding Copyright and License
+**This is a forked repository from the [SDC-Vehicle-Detection](https://github.com/balancap/SDC-Vehicle-Detection) by [Paul Balanca](https://github.com/balancap).**  
+**All copyrights are as mentioned in the source code, and retained to its rightful owner.**  
+
+Though there isn't any `license.txt` or `license.md` file within the original repository,
+copyrights **are mentioned** at the head of each source file.
+Parts of the source code that explain copyright are exactly identical to the original repo. **They are left intact.**  
+
+* Example of a Copyright header within the source file
+```
+#Copyright 2016 Paul Balanca. All Rights Reserved.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+```
+
+## Goal of this Repo
+**The Goal of this repo is to enhance the SSD for [KITTI 2D Object Detection](http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d)**  
+
+Original SSD has square input size(300x300, 512x512) and many datasets are comprised of (nearly) square images.  
+However, KITTI images are 375x1242. In other words, the height and the width of the images are not even.  
+Due to this fact, simple resizing of the image to 300x300 often leads to poor detection accuracy.  
+
+Therefore, we plan to tackle and modify several parts of the SSD (ex. size of Conv layers, filters, preprocessing methods, etc.) to enhance SSD for KITTI. 
+
+***
+(Below is the origianl README.md from the original repo)  
+***
+
 # Udacity SDC: Vehicle Detection
 
 The goad of this project is to implement a robust pipeline capable of detecting moving vehicles in real-time. Even though the project was designed for using classic Computer Vision techniques, namely HOG features and SVM classifier, in agreement the course organizers, I decided like a few other students to go for a deep learning approach.
