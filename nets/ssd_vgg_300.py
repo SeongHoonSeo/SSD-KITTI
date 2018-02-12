@@ -72,18 +72,34 @@ class SSDNet(object):
     The default image size used to train this network is 300x300.
     """
     default_params = SSDParams(
-        img_shape=(300, 300),
+        # ori img_shape=(300, 300),
+	img_shape=(384, 1280), # add
         num_classes=8,
         no_annotation_label=9,
         feat_layers=['block4', 'block7', 'block8', 'block9', 'block10', 'block11'],
-        feat_shapes=[(38, 38), (19, 19), (10, 10), (5, 5), (3, 3), (1, 1)],
-        anchor_size_bounds=[0.15, 0.90],
-        anchor_sizes=[(21., 45.),
-                      (45., 99.),
-                      (99., 153.),
-                      (153., 207.),
-                      (207., 261.),
-                      (261., 315.)],
+# ori        feat_shapes=[(38, 38), (19, 19), (10, 10), (5, 5), (3, 3), (1, 1)],
+        feat_shapes=[(48, 160), (24, 80), (12, 40), (6, 20), (4, 18), (2, 16)], # add
+        #anchor_size_bounds=[0.15, 0.90],
+        anchor_size_bounds=[0.15, 0.75],
+        #anchor_size_bounds=[0.12, 0.90],
+        #anchor_sizes=[(21., 45.),
+        #              (45., 99.),
+        #             (99., 153.),
+        #             (153., 207.),
+        #             (207., 261.),
+        #             (261., 315.)],
+        anchor_sizes=[(26.88, 57.6),
+                      (57.6, 115.2),
+                      (115.2, 172.8),
+                      (172.8, 230.4),
+                      (230.4, 288.),
+                      (288., 345.6)],
+        #anchor_sizes=[(23.04, 46.08),
+        #              (46.08, 120.96),
+        #              (120.96, 195.84),
+        #              (195.84, 270.72),
+        #              (270.72, 345.6),
+        #              (345.6, 413.46)],
         anchor_ratios=[[2, .5],
                        [2, .5, 3, 1./3],
                        [2, .5, 3, 1./3],
@@ -91,6 +107,7 @@ class SSDNet(object):
                        [2, .5],
                        [2, .5]],
         anchor_steps=[8, 16, 32, 64, 100, 300],
+        #anchor_steps=[8, 16, 32, 64, 96, 192],
         anchor_offset=0.5,
         normalizations=[20, -1, -1, -1, -1, -1],
         prior_scaling=[0.1, 0.1, 0.2, 0.2]
@@ -141,6 +158,7 @@ class SSDNet(object):
         """Caffe arg_scope used for weights importing.
         """
         return ssd_arg_scope_caffe(caffe_scope)
+
 
     # ======================================================================= #
     def update_feature_shapes(self, predictions):
@@ -202,7 +220,7 @@ class SSDNet(object):
 # =========================================================================== #
 def ssd_size_bounds_to_values(size_bounds,
                               n_feat_layers,
-                              img_shape=(300, 300)):
+                              img_shape=(384, 1280)):
     """Compute the reference sizes of the anchor boxes from relative bounds.
     The absolute values are measured in pixels, based on the network
     default size (300 pixels).
@@ -214,14 +232,14 @@ def ssd_size_bounds_to_values(size_bounds,
       list of list containing the absolute sizes at each scale. For each scale,
       the ratios only apply to the first value.
     """
-    assert img_shape[0] == img_shape[1]
+    # assert img_shape[0] == img_shape[1]
 
     img_size = img_shape[0]
     min_ratio = int(size_bounds[0] * 100)
     max_ratio = int(size_bounds[1] * 100)
     step = int(math.floor((max_ratio - min_ratio) / (n_feat_layers - 2)))
     # Start with the following smallest sizes.
-    sizes = [[img_size * 0.07, img_size * 0.15]]
+    sizes = [[img_size * 0.06, img_size * 0.12]]
     for ratio in range(min_ratio, max_ratio + 1, step):
         sizes.append((img_size * ratio / 100.,
                       img_size * (ratio + step) / 100.))
@@ -296,14 +314,17 @@ def ssd_anchor_one_layer(img_shape,
     # Add first anchor boxes with ratio=1.
     h[0] = sizes[0] / img_shape[0]
     w[0] = sizes[0] / img_shape[1]
+    #w[0] = sizes[0] / img_shape[0]
     di = 1
     if len(sizes) > 1:
         h[1] = math.sqrt(sizes[0] * sizes[1]) / img_shape[0]
         w[1] = math.sqrt(sizes[0] * sizes[1]) / img_shape[1]
+        #w[1] = math.sqrt(sizes[0] * sizes[1]) / img_shape[0]
         di += 1
     for i, r in enumerate(ratios):
         h[i+di] = sizes[0] / img_shape[0] / math.sqrt(r)
         w[i+di] = sizes[0] / img_shape[1] * math.sqrt(r)
+        #w[i+di] = sizes[0] / img_shape[0] * math.sqrt(r)
     return y, x, h, w
 
 
@@ -439,6 +460,8 @@ def ssd_net(inputs,
         with tf.variable_scope(end_point):
             net = slim.conv2d(net, 128, [1, 1], scope='conv1x1')
             net = slim.conv2d(net, 256, [3, 3], scope='conv3x3', padding='VALID')
+            #net = slim.conv2d(net, 256, [2, 2], stride=2, scope='conv3x3', padding='VALID')
+            #net = slim.conv2d(net, 256, [2, 2], stride=2, scope='conv2x2x', padding='VALID')
         end_points[end_point] = net
 
         # Prediction and localisations layers.
@@ -457,7 +480,7 @@ def ssd_net(inputs,
             localisations.append(l)
 
         return predictions, localisations, logits, end_points
-ssd_net.default_image_size = 300
+#ssd_net.default_image_size = 300
 
 
 def ssd_arg_scope(weight_decay=0.0005):
@@ -550,6 +573,9 @@ def ssd_losses(logits, localisations,
                 nmask = tf.logical_and(tf.logical_not(pmask),
                                        gscores[i] > -0.5)
                 fnmask = tf.cast(nmask, dtype)
+                #nvalues = tf.select(nmask,
+                #                    predictions[:, :, :, :, 0],
+                #                    1. - fnmask)
                 nvalues = tf.where(nmask,
                                     predictions[:, :, :, :, 0],
                                     1. - fnmask)
