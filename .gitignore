@@ -3,6 +3,7 @@ datasets/__pycache__/
 deployment/__pycache__/
 nets/__pycache__/
 preprocessing/__pycache__/
+History/
 
 .ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/
@@ -15,3 +16,5 @@ checkpoints/ssd_300_vgg.ckpt.index
 
 logs/
 *.log
+
+*.idea/

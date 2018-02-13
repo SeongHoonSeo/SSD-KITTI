@@ -26,6 +26,8 @@ from preprocessing import preprocessing_factory
 slim = tf.contrib.slim
 
 
+DATA_FORMAT = 'NHWC'
+
 tf.app.flags.DEFINE_string(
     'train_dir', '/tmp/tfmodel/',
     'Directory where checkpoints and event logs are written to.')
@@ -129,7 +131,7 @@ tf.app.flags.DEFINE_integer(
     'evaluate the VGG and ResNet architectures which do not use a background '
     'class for the ImageNet dataset.')
 tf.app.flags.DEFINE_string(
-    'model_name', 'inception_v3', 'The name of the architecture to train.')
+    'model_name', 'ssd_300_vgg', 'The name of the architecture to train.')
 tf.app.flags.DEFINE_string(
     'preprocessing_name', None, 'The name of the preprocessing to use. If left '
     'as `None`, then the model_name flag is used.')
@@ -396,7 +398,7 @@ def main(_):
                                                              'object/bbox'])
             # Pre-processing image, labels and bboxes.
             image, glabels, gbboxes = \
-                image_preprocessing_fn(image, glabels, gbboxes, ssd_shape)
+                image_preprocessing_fn(image, glabels, gbboxes, out_shape=ssd_shape, data_format=DATA_FORMAT)
             # Encode groundtruth labels and bboxes.
             gclasses, glocalisations, gscores = \
                 ssd_net.bboxes_encode(glabels, gbboxes, ssd_anchors)
@@ -428,7 +430,7 @@ def main(_):
                 _reshape_list(batch_queue.dequeue(), batch_shape)
 
             # Construct SSD network.
-            arg_scope = ssd_net.arg_scope(weight_decay=FLAGS.weight_decay)
+            arg_scope = ssd_net.arg_scope(weight_decay=FLAGS.weight_decay, data_format=DATA_FORMAT)
             with slim.arg_scope(arg_scope):
                 predictions, localisations, logits, end_points = \
                     ssd_net.net(b_image, is_training=True)

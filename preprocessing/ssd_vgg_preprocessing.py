@@ -28,7 +28,8 @@ slim = tf.contrib.slim
 # Resizing strategies.
 Resize = Enum('Resize', ('NONE',                # Nothing!
                          'CENTRAL_CROP',        # Crop (and pad if necessary).
-                         'PAD_AND_RESIZE'))     # Pad, and resize to output .shape
+                         'PAD_AND_RESIZE',      # Pad, and resize to output .shape
+                         'WARP_RESIZE'))        # Warp resize 
 
 # VGG mean parameters.
 _R_MEAN = 123.
@@ -36,9 +37,11 @@ _G_MEAN = 117.
 _B_MEAN = 104.
 
 # Some training pre-processing parameters.
-BBOX_CROP_OVERLAP = 0.4        # Minimum overlap to keep a bbox after cropping.
+BBOX_CROP_OVERLAP = 0.5        # Minimum overlap to keep a bbox after cropping.
 CROP_RATIO_RANGE = (0.8, 1.2)  # Distortion ratio during cropping.
-
+MIN_OBJECT_COVERED = 0.3       # An optional `float`. Defaults to `0.1`. The cropped area of the image must contain
+                               # at least this fraction of any bounding box supplied.
+EVAL_SIZE = (300, 300)         # Input of the network
 
 def tf_image_whitened(image, means=[_R_MEAN, _G_MEAN, _B_MEAN]):
     """Subtracts the given means from each image channel.
@@ -171,7 +174,7 @@ def distort_color(image, color_ordering=0, fast_mode=True, scope=None):
 def distorted_bounding_box_crop(image,
                                 labels,
                                 bboxes,
-                                min_object_covered=0.05,
+                                min_object_covered=0.3,
                                 aspect_ratio_range=(0.9, 1.1),
                                 area_range=(0.1, 1.0),
                                 max_attempts=200,
@@ -224,8 +227,7 @@ def distorted_bounding_box_crop(image,
                                                              BBOX_CROP_OVERLAP)
         return cropped_image, labels, bboxes, distort_bbox
 
-
-def preprocess_for_train(image, labels, bboxes, out_shape,
+def preprocess_for_train(image, labels, bboxes, out_shape, data_format='NHWC',
                          scope='ssd_preprocessing_train'):
     """Preprocesses the given image for training.
 
@@ -240,6 +242,8 @@ def preprocess_for_train(image, labels, bboxes, out_shape,
             aspect-preserving resizing.
         resize_side_max: The upper bound for the smallest side of the image for
             aspect-preserving resizing.
+
+
 
     Returns:
         A preprocessed image.
@@ -260,9 +264,11 @@ def preprocess_for_train(image, labels, bboxes, out_shape,
 
         # Distort image and bounding boxes.
         dst_image = image
-        dst_image, labels, bboxes, distort_bbox = \
-            distorted_bounding_box_crop(image, labels, bboxes,
-                                        aspect_ratio_range=CROP_RATIO_RANGE)
+        #dst_image, labels, bboxes, distort_bbox = \
+        #    distorted_bounding_box_crop(image, labels, bboxes, 
+        #                                min_object_covered=MIN_OBJECT_COVERED,
+        #                                aspect_ratio_range=CROP_RATIO_RANGE)
+        
         # Resize image to output size.
         dst_image = tf_image.resize_image(dst_image, out_shape,
                                           method=tf.image.ResizeMethod.BILINEAR,
@@ -282,10 +288,14 @@ def preprocess_for_train(image, labels, bboxes, out_shape,
         # Rescale to VGG input scale.
         image = dst_image * 255.
         image = tf_image_whitened(image, [_R_MEAN, _G_MEAN, _B_MEAN])
+        # Convert to NHWC format if it is in NCHW format
+        if data_format == 'NCHW':
+            image = tf.transpose(image, perm=(2, 0, 1))
         return image, labels, bboxes
 
 
-def preprocess_for_eval(image, labels, bboxes, out_shape, resize,
+def preprocess_for_eval(image, labels, bboxes, out_shape=EVAL_SIZE, 
+                        data_format='NHWC', resize=Resize.WARP_RESIZE,
                         scope='ssd_preprocessing_train'):
     """Preprocess an image for evaluation.
 
@@ -309,12 +319,15 @@ def preprocess_for_eval(image, labels, bboxes, out_shape, resize,
         if bboxes is None:
             bboxes = bbox_img
         else:
-            bboxes = tf.concat(0, [bbox_img, bboxes])
+            bboxes = tf.concat([bbox_img, bboxes], axis=0)
 
         # Resize strategy...
         if resize == Resize.NONE:
+            # No resizing
             pass
+
         elif resize == Resize.CENTRAL_CROP:
+            # Central cropping of the image
             image, bboxes = tf_image.resize_image_bboxes_with_crop_or_pad(
                 image, bboxes, out_shape[0], out_shape[1])
         elif resize == Resize.PAD_AND_RESIZE:
@@ -332,6 +345,9 @@ def preprocess_for_eval(image, labels, bboxes, out_shape, resize,
             # Pad to expected size.
             image, bboxes = tf_image.resize_image_bboxes_with_crop_or_pad(
                 image, bboxes, out_shape[0], out_shape[1])
+        elif resize == Resize.WARP_RESIZE:
+            # Warp resize of the image.
+            image = tf_image.resize(image, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
 
         # Split back bounding boxes.
         bbox_img = bboxes[0]
@@ -343,8 +359,9 @@ def preprocess_image(image,
                      labels,
                      bboxes,
                      out_shape,
+                     data_format,
                      is_training=False,
-                     resize=Resize.CENTRAL_CROP):
+                     **kwargs):
     """Pre-process an given image.
 
     Args:
@@ -365,6 +382,6 @@ def preprocess_image(image,
       A preprocessed image.
     """
     if is_training:
-        return preprocess_for_train(image, labels, bboxes, out_shape)
+        return preprocess_for_train(image, labels, bboxes, out_shape=out_shape, data_format=data_format)
     else:
-        return preprocess_for_eval(image, labels, bboxes, out_shape, resize)
+        return preprocess_for_eval(image, labels, bboxes, out_shape=out_shape, data_format=data_format, **kwargs)

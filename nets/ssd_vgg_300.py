@@ -132,10 +132,10 @@ class SSDNet(object):
             self.params = self.params._replace(feat_shapes=shapes)
         return r
 
-    def arg_scope(self, weight_decay=0.0005):
+    def arg_scope(self, weight_decay=0.0005, data_format='NHWC'):
         """Network arg_scope.
         """
-        return ssd_arg_scope(weight_decay)
+        return ssd_arg_scope(weight_decay, data_format=data_format)
 
     def arg_scope_caffe(self, caffe_scope):
         """Caffe arg_scope used for weights importing.
@@ -460,7 +460,7 @@ def ssd_net(inputs,
 ssd_net.default_image_size = 300
 
 
-def ssd_arg_scope(weight_decay=0.0005):
+def ssd_arg_scope(weight_decay=0.0005, data_format='NHWC'):
     """Defines the VGG arg scope.
 
     Args:
@@ -473,9 +473,9 @@ def ssd_arg_scope(weight_decay=0.0005):
                         activation_fn=tf.nn.relu,
                         weights_regularizer=slim.l2_regularizer(weight_decay),
                         weights_initializer=tf.contrib.layers.xavier_initializer(),
-                        biases_initializer=tf.zeros_initializer):
+                        biases_initializer=tf.zeros_initializer()):
         with slim.arg_scope([slim.conv2d, slim.max_pool2d],
-                            padding='SAME') as sc:
+                            padding='SAME', data_format=data_format) as sc:
             return sc
 
 
