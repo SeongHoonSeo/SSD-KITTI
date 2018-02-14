@@ -14,7 +14,7 @@
 # ==============================================================================
 """Pre-processing images for SSD-type networks.
 """
-from enum import Enum
+from enum import Enum, IntEnum
 
 import numpy as np
 import tensorflow as tf
@@ -26,7 +26,7 @@ from nets import ssd_common
 slim = tf.contrib.slim
 
 # Resizing strategies.
-Resize = Enum('Resize', ('NONE',                # Nothing!
+Resize = IntEnum('Resize', ('NONE',                # Nothing!
                          'CENTRAL_CROP',        # Crop (and pad if necessary).
                          'PAD_AND_RESIZE',      # Pad, and resize to output .shape
                          'WARP_RESIZE'))        # Warp resize 
@@ -347,7 +347,7 @@ def preprocess_for_eval(image, labels, bboxes, out_shape=EVAL_SIZE,
                 image, bboxes, out_shape[0], out_shape[1])
         elif resize == Resize.WARP_RESIZE:
             # Warp resize of the image.
-            image = tf_image.resize(image, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
+            image = tf_image.resize_image(image, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
 
         # Split back bounding boxes.
         bbox_img = bboxes[0]

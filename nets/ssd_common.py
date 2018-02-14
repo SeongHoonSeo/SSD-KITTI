@@ -16,10 +16,10 @@
 """
 import numpy as np
 import tensorflow as tf
-
+import tf_extended as tfe
 
 # =========================================================================== #
-# TensorFlow implementation pf boxes SSD encoding / decoding.
+# TensorFlow implementation of boxes SSD encoding / decoding.
 # =========================================================================== #
 def tf_ssd_bboxes_encode_layer(labels,
                                bboxes,
@@ -247,352 +247,158 @@ def tf_ssd_bboxes_decode(feat_localizations,
                                            prior_scaling))
         return bboxes
 
-
 # =========================================================================== #
-# Additional TF bboxes methods.
+# SSD boxes selection.
 # =========================================================================== #
-def tf_bboxes_jaccard(bbox_ref, bboxes):
-        """Compute jaccard score between a reference box and a collection
-        of bounding boxes.
-
-        Args:
-          bbox_ref: Reference bounding box. 1x4 or 4 Tensor.
-          bboxes: Nx4 Tensor, collection of bounding boxes.
-        Return:
-          Nx4 Tensor with Jaccard scores.
-        """
-        # Intersection bbox and volume.
-        int_ymin = tf.maximum(bboxes[:, 0], bbox_ref[0])
-        int_xmin = tf.maximum(bboxes[:, 1], bbox_ref[1])
-        int_ymax = tf.minimum(bboxes[:, 2], bbox_ref[2])
-        int_xmax = tf.minimum(bboxes[:, 3], bbox_ref[3])
-        h = tf.maximum(int_ymax - int_ymin, 0.)
-        w = tf.maximum(int_xmax - int_xmin, 0.)
-        # Volumes.
-        inter_vol = h * w
-        union_vol = -inter_vol \
-            + (bboxes[:, 2] - bboxes[:, 0]) * (bboxes[:, 3] - bboxes[:, 1]) \
-            + (bbox_ref[2] - bbox_ref[0]) * (bbox_ref[3] - bbox_ref[1])
-        jaccard = tf.div(inter_vol, union_vol)
-        return jaccard
-
-
-def tf_bboxes_intersection(bbox_ref, bboxes):
-        """Compute relative intersection between a reference box and a
-        collection of bounding boxes. Namely, compute the quotient between
-        intersection area and box area.
-
-        Args:
-          bbox_ref: Reference bounding box. 1x4 or 4 Tensor.
-          bboxes: Nx4 Tensor, collection of bounding boxes.
-        Return:
-          Nx4 Tensor with relative intersection.
-        """
-        # Intersection bbox and volume.
-        int_ymin = tf.maximum(bboxes[:, 0], bbox_ref[0])
-        int_xmin = tf.maximum(bboxes[:, 1], bbox_ref[1])
-        int_ymax = tf.minimum(bboxes[:, 2], bbox_ref[2])
-        int_xmax = tf.minimum(bboxes[:, 3], bbox_ref[3])
-        h = tf.maximum(int_ymax - int_ymin, 0.)
-        w = tf.maximum(int_xmax - int_xmin, 0.)
-        # Volumes.
-        inter_vol = h * w
-        bboxes_vol = (bboxes[:, 2] - bboxes[:, 0]) * (bboxes[:, 3] - bboxes[:, 1])
-        scores = tf.div(inter_vol, bboxes_vol)
-        return scores
-
-
-def tf_bboxes_resize(bbox_ref, bboxes,
-                     scope='bboxes_resize'):
-    """Resize bounding boxes based on a reference bounding box,
-    assuming that the latter is [0, 0, 1, 1] after transform.
-    """
-    with tf.name_scope(scope):
-        # Translate.
-        v = tf.stack([bbox_ref[0], bbox_ref[1], bbox_ref[0], bbox_ref[1]])
-        bboxes = bboxes - v
-        # Resize.
-        s = tf.stack([bbox_ref[2] - bbox_ref[0],
-                      bbox_ref[3] - bbox_ref[1],
-                      bbox_ref[2] - bbox_ref[0],
-                      bbox_ref[3] - bbox_ref[1]])
-        bboxes = bboxes / s
-        return bboxes
-
-
-def tf_bboxes_filter_center(labels, bboxes,
-                            margins=[0., 0., 0., 0.],
-                            scope=None):
-    """Filter out bounding boxes whose center are not in
-    the rectangle [0, 0, 1, 1] + margins. The margin Tensor
-    can be used to enforce or loosen this condition.
-
-    Return:
-      labels, bboxes: Filtered elements.
-    """
-    with tf.name_scope(scope, 'bboxes_filter', [labels, bboxes]):
-        cy = (bboxes[:, 0] + bboxes[:, 2]) / 2.
-        cx = (bboxes[:, 1] + bboxes[:, 3]) / 2.
-        mask = tf.greater(cy, margins[0])
-        mask = tf.logical_and(mask, tf.greater(cx, margins[1]))
-        mask = tf.logical_and(mask, tf.less(cx, 1. + margins[2]))
-        mask = tf.logical_and(mask, tf.less(cx, 1. + margins[3]))
-        # Boolean masking...
-        labels = tf.boolean_mask(labels, mask)
-        bboxes = tf.boolean_mask(bboxes, mask)
-        return labels, bboxes
-
-
-def tf_bboxes_filter_overlap(labels, bboxes,
-                             threshold=0.5,
-                             scope=None):
-    """Filter out bounding boxes based on overlap with reference
-    box [0, 0, 1, 1].
-
-    Return:
-      labels, bboxes: Filtered elements.
-    """
-    with tf.name_scope(scope, 'bboxes_filter', [labels, bboxes]):
-        scores = tf_bboxes_intersection(tf.constant([0, 0, 1, 1], bboxes.dtype),
-                                        bboxes)
-        # Boolean masking...
-        mask = scores > threshold
-        labels = tf.boolean_mask(labels, mask)
-        bboxes = tf.boolean_mask(bboxes, mask)
-        return labels, bboxes
-
-
-def tf_bboxes_filter_labels(labels, bboxes,
-                            out_labels=[], num_classes=np.inf,
-                            scope=None):
-    """Filter out labels from a collection. Typically used to get
-    of DontCare elements. Also remove elements based on the number of classes.
-
-    Return:
-      labels, bboxes: Filtered elements.
-    """
-    with tf.name_scope(scope, 'bboxes_filter_labels', [labels, bboxes]):
-        mask = tf.greater_equal(labels, num_classes)
-        for l in labels:
-            mask = tf.logical_and(mask, tf.not_equal(labels, l))
-        labels = tf.boolean_mask(labels, mask)
-        bboxes = tf.boolean_mask(bboxes, mask)
-        return labels, bboxes
-
-
-# =========================================================================== #
-# Numpy implementations of SSD boxes functions.
-# =========================================================================== #
-def ssd_bboxes_decode(feat_localizations,
-                      anchor_bboxes,
-                      prior_scaling=[0.1, 0.1, 0.2, 0.2]):
-    """Compute the relative bounding boxes from the layer features and
-    reference anchor bounding boxes.
-
-    Return:
-      numpy array Nx4: ymin, xmin, ymax, xmax
-    """
-    yref, xref, href, wref = anchor_bboxes
-    xref = np.reshape(xref, [np.prod(xref.shape), 1])
-    yref = np.reshape(yref, [np.prod(yref.shape), 1])
-
-    # Compute center, height and width
-    cx = feat_localizations[:, :, 0] * wref * prior_scaling[0] + xref
-    cy = feat_localizations[:, :, 1] * href * prior_scaling[1] + yref
-    w = wref * np.exp(feat_localizations[:, :, 2] * prior_scaling[2])
-    h = href * np.exp(feat_localizations[:, :, 3] * prior_scaling[3])
-    # bboxes: ymin, xmin, xmax, ymax.
-    bboxes = np.zeros_like(feat_localizations)
-    bboxes[:, :, 0] = cy - h / 2.
-    bboxes[:, :, 1] = cx - w / 2.
-    bboxes[:, :, 2] = cy + h / 2.
-    bboxes[:, :, 3] = cx + w / 2.
-    return bboxes
-
-
-def ssd_bboxes_select_layer(predictions_layer,
-                            localizations_layer,
-                            anchors_layer,
-                            threshold=0.5,
-                            img_shape=(300, 300),
-                            num_classes=21,
-                            decode=True):
+def tf_ssd_bboxes_select_layer(predictions_layer, localizations_layer,
+                               select_threshold=None,
+                               num_classes=8,
+                               ignore_class=0,
+                               scope=None):
     """Extract classes, scores and bounding boxes from features in one layer.
-
+    Batch-compatible: inputs are supposed to have batch-type shapes.
+    Args:
+      predictions_layer: A SSD prediction layer;
+      localizations_layer: A SSD localization layer;
+      select_threshold: Classification threshold for selecting a box. All boxes
+        under the threshold are set to 'zero'. If None, no threshold applied.
     Return:
-      classes, scores, bboxes: Numpy arrays...
+      d_scores, d_bboxes: Dictionary of scores and bboxes Tensors of
+        size Batches X N x 1 | 4. Each key corresponding to a class.
     """
-    # Reshape features: N x N_Anchors x N_labels|4
-    shape = predictions_layer.shape
-    predictions_layer = np.reshape(predictions_layer,
-                                   (np.prod(shape[:-2]), shape[-2], shape[-1]))
-    shape = localizations_layer.shape
-    localizations_layer = np.reshape(localizations_layer,
-                                     (np.prod(shape[:-2]), shape[-2], shape[-1]))
+    select_threshold = 0.0 if select_threshold is None else select_threshold
+    with tf.name_scope(scope, 'ssd_bboxes_select_layer',
+                       [predictions_layer, localizations_layer]):
+        # Reshape features: Batches x N x N_labels | 4
+        p_shape = tfe.get_shape(predictions_layer)
+        predictions_layer = tf.reshape(predictions_layer,
+                                       tf.stack([p_shape[0], -1, p_shape[-1]]))
+        l_shape = tfe.get_shape(localizations_layer)
+        localizations_layer = tf.reshape(localizations_layer,
+                                         tf.stack([l_shape[0], -1, l_shape[-1]]))
 
-    # Predictions, removing first void class.
-    sub_predictions = predictions_layer[:, :, 1:]
-    idxes = np.where(sub_predictions > threshold)
-    classes = idxes[-1]+1
-    scores = sub_predictions[idxes]
-    # Decode localizations features and get bboxes.
-    bboxes = localizations_layer
-    if decode:
-        bboxes = ssd_bboxes_decode(localizations_layer, anchors_layer)
-    bboxes = bboxes[idxes[:-1]]
+        d_scores = {}
+        d_bboxes = {}
+        for c in range(0, num_classes):
+            if c != ignore_class:
+                # Remove boxes under the threshold.
+                scores = predictions_layer[:, :, c]
+                fmask = tf.cast(tf.greater_equal(scores, select_threshold), scores.dtype)
+                scores = scores * fmask
+                bboxes = localizations_layer * tf.expand_dims(fmask, axis=-1)
+                # Append to dictionary.
+                d_scores[c] = scores
+                d_bboxes[c] = bboxes
 
-    return classes, scores, bboxes, idxes[:-1]
+        return d_scores, d_bboxes
 
 
-def ssd_bboxes_select(predictions_net,
-                      localizations_net,
-                      anchors_net,
-                      threshold=0.5,
-                      img_shape=(300, 300),
-                      num_classes=21,
-                      decode=True):
+def tf_ssd_bboxes_select(predictions_net, localizations_net,
+                         select_threshold=None,
+                         num_classes=8,
+                         ignore_class=0,
+                         scope=None):
     """Extract classes, scores and bounding boxes from network output layers.
-
+    Batch-compatible: inputs are supposed to have batch-type shapes.
+    Args:
+      predictions_net: List of SSD prediction layers;
+      localizations_net: List of localization layers;
+      select_threshold: Classification threshold for selecting a box. All boxes
+        under the threshold are set to 'zero'. If None, no threshold applied.
     Return:
-      classes, scores, bboxes: Numpy arrays...
+      d_scores, d_bboxes: Dictionary of scores and bboxes Tensors of
+        size Batches X N x 1 | 4. Each key corresponding to a class.
     """
-    l_classes = []
-    l_scores = []
-    l_bboxes = []
-    l_layers = []
-    l_idxes = []
-    for i in range(len(predictions_net)):
-        classes, scores, bboxes, idxes = ssd_bboxes_select_layer(
-            predictions_net[i], localizations_net[i], anchors_net[i],
-            threshold, img_shape, num_classes, decode)
-        l_classes.append(classes)
-        l_scores.append(scores)
-        l_bboxes.append(bboxes)
-        # Debug information.
-        l_layers.append(i)
-        l_idxes.append((i, idxes))
+    with tf.name_scope(scope, 'ssd_bboxes_select',
+                       [predictions_net, localizations_net]):
+        l_scores = []
+        l_bboxes = []
+        for i in range(len(predictions_net)):
+            scores, bboxes = tf_ssd_bboxes_select_layer(predictions_net[i],
+                                                        localizations_net[i],
+                                                        select_threshold,
+                                                        num_classes,
+                                                        ignore_class)
+            l_scores.append(scores)
+            l_bboxes.append(bboxes)
+        # Concat results.
+        d_scores = {}
+        d_bboxes = {}
+        for c in l_scores[0].keys():
+            ls = [s[c] for s in l_scores]
+            lb = [b[c] for b in l_bboxes]
+            d_scores[c] = tf.concat(ls, axis=1)
+            d_bboxes[c] = tf.concat(lb, axis=1)
+        return d_scores, d_bboxes
 
-    classes = np.concatenate(l_classes, 0)
-    scores = np.concatenate(l_scores, 0)
-    bboxes = np.concatenate(l_bboxes, 0)
-    # layers = np.concatenate(l_layers, 0)
-    return classes, scores, bboxes, l_layers, l_idxes
 
-
-# =========================================================================== #
-# Common functions for bboxes handling and selection.
-# =========================================================================== #
-def bboxes_sort(classes, scores, bboxes,
-                top_k=400, priority_inside=True, margin=0.05):
-    """Sort bounding boxes by decreasing order and keep only the top_k
-    """
-    if priority_inside:
-        inside = (bboxes[:, 0] > margin) & (bboxes[:, 1] > margin) & \
-            (bboxes[:, 2] < 1-margin) & (bboxes[:, 3] < 1-margin)
-        idxes = np.argsort(-scores)
-        inside = inside[idxes]
-        idxes = np.concatenate([idxes[inside], idxes[~inside]])
+def tf_ssd_bboxes_select_layer_all_classes(predictions_layer, localizations_layer,
+                                           select_threshold=None):
+    """Extract classes, scores and bounding boxes from features in one layer.
+     Batch-compatible: inputs are supposed to have batch-type shapes.
+     Args:
+       predictions_layer: A SSD prediction layer;
+       localizations_layer: A SSD localization layer;
+      select_threshold: Classification threshold for selecting a box. If None,
+        select boxes whose classification score is higher than 'no class'.
+     Return:
+      classes, scores, bboxes: Input Tensors.
+     """
+    # Reshape features: Batches x N x N_labels | 4
+    p_shape = tfe.get_shape(predictions_layer)
+    predictions_layer = tf.reshape(predictions_layer,
+                                   tf.stack([p_shape[0], -1, p_shape[-1]]))
+    l_shape = tfe.get_shape(localizations_layer)
+    localizations_layer = tf.reshape(localizations_layer,
+                                     tf.stack([l_shape[0], -1, l_shape[-1]]))
+    # Boxes selection: use threshold or score > no-label criteria.
+    if select_threshold is None or select_threshold == 0:
+        # Class prediction and scores: assign 0. to 0-class
+        classes = tf.argmax(predictions_layer, axis=2)
+        scores = tf.reduce_max(predictions_layer, axis=2)
+        scores = scores * tf.cast(classes > 0, scores.dtype)
     else:
-        idxes = np.argsort(-scores)
-    classes = classes[idxes][:top_k]
-    scores = scores[idxes][:top_k]
-    bboxes = bboxes[idxes][:top_k]
+        sub_predictions = predictions_layer[:, :, 1:]
+        classes = tf.argmax(sub_predictions, axis=2) + 1
+        scores = tf.reduce_max(sub_predictions, axis=2)
+        # Only keep predictions higher than threshold.
+        mask = tf.greater(scores, select_threshold)
+        classes = classes * tf.cast(mask, classes.dtype)
+        scores = scores * tf.cast(mask, scores.dtype)
+    # Assume localization layer already decoded.
+    bboxes = localizations_layer
     return classes, scores, bboxes
 
 
-def bboxes_clip(bbox_ref, bboxes):
-    """Sort bounding boxes by decreasing order and keep only the top_k
+def tf_ssd_bboxes_select_all_classes(predictions_net, localizations_net,
+                                     select_threshold=None,
+                                     scope=None):
+    """Extract classes, scores and bounding boxes from network output layers.
+    Batch-compatible: inputs are supposed to have batch-type shapes.
+    Args:
+      predictions_net: List of SSD prediction layers;
+      localizations_net: List of localization layers;
+      select_threshold: Classification threshold for selecting a box. If None,
+        select boxes whose classification score is higher than 'no class'.
+    Return:
+      classes, scores, bboxes: Tensors.
     """
-    bboxes[:, 0] = np.maximum(bboxes[:, 0], bbox_ref[0])
-    bboxes[:, 1] = np.maximum(bboxes[:, 1], bbox_ref[1])
-    bboxes[:, 2] = np.minimum(bboxes[:, 2], bbox_ref[2])
-    bboxes[:, 3] = np.minimum(bboxes[:, 3], bbox_ref[3])
-    return bboxes
+    with tf.name_scope(scope, 'ssd_bboxes_select',
+                       [predictions_net, localizations_net]):
+        l_classes = []
+        l_scores = []
+        l_bboxes = []
+        for i in range(len(predictions_net)):
+            classes, scores, bboxes = \
+                tf_ssd_bboxes_select_layer_all_classes(predictions_net[i],
+                                                       localizations_net[i],
+                                                       select_threshold)
+            l_classes.append(classes)
+            l_scores.append(scores)
+            l_bboxes.append(bboxes)
 
-
-def bboxes_resize(bbox_ref, bboxes):
-    """Resize bounding boxes based on a reference bounding box,
-    assuming that the latter is [0, 0, 1, 1] after transform.
-    """
-    bboxes = np.copy(bboxes)
-    # Translate.
-    bboxes[:, 0] -= bbox_ref[0]
-    bboxes[:, 1] -= bbox_ref[1]
-    bboxes[:, 2] -= bbox_ref[0]
-    bboxes[:, 3] -= bbox_ref[1]
-    # Resize.
-    resize = [bbox_ref[2] - bbox_ref[0], bbox_ref[3] - bbox_ref[1]]
-    bboxes[:, 0] /= resize[0]
-    bboxes[:, 1] /= resize[1]
-    bboxes[:, 2] /= resize[0]
-    bboxes[:, 3] /= resize[1]
-    return bboxes
-
-
-def bboxes_jaccard(bboxes1, bboxes2):
-    """Computing jaccard index between bboxes1 and bboxes2.
-    Note: bboxes1 can be multi-dimensional.
-    """
-    if bboxes1.ndim == 1:
-        bboxes1 = np.expand_dims(bboxes1, 0)
-    if bboxes2.ndim == 1:
-        bboxes2 = np.expand_dims(bboxes2, 0)
-    # Intersection bbox and volume.
-    int_ymin = np.maximum(bboxes1[:, 0], bboxes2[:, 0])
-    int_xmin = np.maximum(bboxes1[:, 1], bboxes2[:, 1])
-    int_ymax = np.minimum(bboxes1[:, 2], bboxes2[:, 2])
-    int_xmax = np.minimum(bboxes1[:, 3], bboxes2[:, 3])
-
-    int_h = np.maximum(int_ymax - int_ymin, 0.)
-    int_w = np.maximum(int_xmax - int_xmin, 0.)
-    int_vol = int_h * int_w
-    # Union volume.
-    vol1 = (bboxes1[:, 2] - bboxes1[:, 0]) * (bboxes1[:, 3] - bboxes1[:, 1])
-    vol2 = (bboxes2[:, 2] - bboxes2[:, 0]) * (bboxes2[:, 3] - bboxes2[:, 1])
-    jaccard = int_vol / (vol1 + vol2 - int_vol)
-    return jaccard
-
-
-def bboxes_intersection(bbox, bboxes):
-    """Computing jaccard index between bboxes1 and bboxes2.
-    Note: bboxes1 can be multi-dimensional.
-    """
-    if bboxes.ndim == 1:
-        bboxes = np.expand_dims(bboxes, 0)
-    # Intersection bbox and volume.
-    int_ymin = np.maximum(bboxes[:, 0], bbox[0])
-    int_xmin = np.maximum(bboxes[:, 1], bbox[1])
-    int_ymax = np.minimum(bboxes[:, 2], bbox[2])
-    int_xmax = np.minimum(bboxes[:, 3], bbox[3])
-
-    int_h = np.maximum(int_ymax - int_ymin, 0.)
-    int_w = np.maximum(int_xmax - int_xmin, 0.)
-    int_vol = int_h * int_w
-    # Union volume.
-    vol = (bboxes[:, 2] - bboxes[:, 0]) * (bboxes[:, 3] - bboxes[:, 1])
-    score = int_vol / vol
-    return score
-
-
-def bboxes_nms(classes, scores, bboxes, threshold=0.45):
-    """Apply non-maximum selection to bounding boxes.
-    """
-    keep_bboxes = np.ones(scores.shape, dtype=np.bool)
-    for i in range(scores.size-1):
-        if keep_bboxes[i]:
-            # Computer overlap with bboxes which are following.
-            overlap = bboxes_jaccard(bboxes[i], bboxes[(i+1):])
-            # Overlap threshold for keeping + checking part of the same class
-            keep_overlap = np.logical_or(overlap < threshold, classes[(i+1):] != classes[i])
-            keep_bboxes[(i+1):] = np.logical_and(keep_bboxes[(i+1):], keep_overlap)
-
-    idxes = np.where(keep_bboxes)
-    return classes[idxes], scores[idxes], bboxes[idxes]
-
-
-def bboxes_nms_fast(classes, scores, bboxes, threshold=0.45):
-    """Apply non-maximum selection to bounding boxes.
-    """
-    pass
-
+        classes = tf.concat(l_classes, axis=1)
+        scores = tf.concat(l_scores, axis=1)
+        bboxes = tf.concat(l_bboxes, axis=1)
+        return classes, scores, bboxes
 
