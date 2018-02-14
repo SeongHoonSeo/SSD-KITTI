@@ -321,6 +321,9 @@ def preprocess_for_eval(image, labels, bboxes, out_shape=EVAL_SIZE,
         else:
             bboxes = tf.concat([bbox_img, bboxes], axis=0)
 
+        # TODO: fix eval_ssd_network.py so that it can appropriately pass resize options to this method
+        # (This part is currently commented since the parameter is not properly passed.)
+        '''    
         # Resize strategy...
         if resize == Resize.NONE:
             # No resizing
@@ -347,7 +350,11 @@ def preprocess_for_eval(image, labels, bboxes, out_shape=EVAL_SIZE,
                 image, bboxes, out_shape[0], out_shape[1])
         elif resize == Resize.WARP_RESIZE:
             # Warp resize of the image.
+
             image = tf_image.resize(image, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
+        '''
+
+        image = tf_image.resize_image(image, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
 
         # Split back bounding boxes.
         bbox_img = bboxes[0]

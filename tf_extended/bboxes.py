@@ -233,7 +233,7 @@ def bboxes_nms_batch(scores, bboxes, nms_threshold=0.5, keep_top_k=200,
 
 
 # def bboxes_fast_nms(classes, scores, bboxes,
-#                     nms_threshold=0.5, eta=3., num_classes=21,
+#                     nms_threshold=0.5, eta=3., num_classes=8,
 #                     pad_output=True, scope=None):
 #     with tf.name_scope(scope, 'bboxes_fast_nms',
 #                        [classes, scores, bboxes]):
