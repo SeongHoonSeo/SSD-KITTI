@@ -233,7 +233,7 @@ def bboxes_nms_batch(scores, bboxes, nms_threshold=0.5, keep_top_k=200,
 
 
 # def bboxes_fast_nms(classes, scores, bboxes,
-#                     nms_threshold=0.5, eta=3., num_classes=8,
+#                     nms_threshold=0.5, eta=3., num_classes=9,
 #                     pad_output=True, scope=None):
 #     with tf.name_scope(scope, 'bboxes_fast_nms',
 #                        [classes, scores, bboxes]):
@@ -436,11 +436,11 @@ def bboxes_filter_labels(labels, bboxes,
 
     Return:
       labels, bboxes: Filtered elements.
-    """
+    """   
     with tf.name_scope(scope, 'bboxes_filter_labels', [labels, bboxes]):
         mask = tf.greater_equal(labels, num_classes)
-        for l in labels:
-            mask = tf.logical_and(mask, tf.not_equal(labels, l))
+        #for l in labels:
+        #    mask = tf.logical_and(mask, tf.not_equal(labels, l))
         labels = tf.boolean_mask(labels, mask)
         bboxes = tf.boolean_mask(bboxes, mask)
         return labels, bboxes

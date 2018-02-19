@@ -252,7 +252,7 @@ def tf_ssd_bboxes_decode(feat_localizations,
 # =========================================================================== #
 def tf_ssd_bboxes_select_layer(predictions_layer, localizations_layer,
                                select_threshold=None,
-                               num_classes=8,
+                               num_classes=9,
                                ignore_class=0,
                                scope=None):
     """Extract classes, scores and bounding boxes from features in one layer.
@@ -295,7 +295,7 @@ def tf_ssd_bboxes_select_layer(predictions_layer, localizations_layer,
 
 def tf_ssd_bboxes_select(predictions_net, localizations_net,
                          select_threshold=None,
-                         num_classes=8,
+                         num_classes=9,
                          ignore_class=0,
                          scope=None):
     """Extract classes, scores and bounding boxes from network output layers.

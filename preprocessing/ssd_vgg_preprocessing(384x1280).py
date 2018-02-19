@@ -18,6 +18,7 @@ from enum import Enum, IntEnum
 
 import numpy as np
 import tensorflow as tf
+import tf_extended as tfe
 from tensorflow.python.ops import control_flow_ops
 
 from preprocessing import tf_image
@@ -257,10 +258,8 @@ def preprocess_for_train(image, labels, bboxes, out_shape, data_format='NHWC',
             image = tf.image.convert_image_dtype(image, dtype=tf.float32)
         tf_summary_image(image, bboxes, 'image_with_bboxes')
 
-        # # Remove DontCare labels.
-        # labels, bboxes = ssd_common.tf_bboxes_filter_labels(out_label,
-        #                                                     labels,
-        #                                                     bboxes)
+        # Remove DontCare labels.
+        labels, bboxes = tfe.bboxes_filter_labels(labels=labels, bboxes=bboxes, num_classes=9)
 
         # Distort image and bounding boxes.
         dst_image = image

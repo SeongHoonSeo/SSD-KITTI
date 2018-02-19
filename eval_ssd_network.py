@@ -61,7 +61,7 @@ tf.app.flags.DEFINE_integer(
 # Main evaluation flags.
 # =========================================================================== #
 tf.app.flags.DEFINE_integer(
-    'num_classes', 8, 'Number of classes to use in the dataset.')
+    'num_classes', 9, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_integer(
     'batch_size', 1, 'The number of samples in each batch.')
 tf.app.flags.DEFINE_integer(
@@ -94,7 +94,7 @@ tf.app.flags.DEFINE_float(
     'The decay to use for the moving average.'
     'If left as None, then moving averages are not used.')
 tf.app.flags.DEFINE_float(
-    'gpu_memory_fraction', 0.5, 'GPU memory fraction to use.')
+    'gpu_memory_fraction', 0.7, 'GPU memory fraction to use.')
 tf.app.flags.DEFINE_boolean(
     'wait_for_checkpoints', False, 'Wait for new checkpoints in the eval loop.')
 
