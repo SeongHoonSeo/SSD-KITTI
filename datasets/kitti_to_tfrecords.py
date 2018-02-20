@@ -14,7 +14,7 @@
 # ==============================================================================
 """Converts KITTI data to TFRecords file format with Example protos.
 
-The raw Pascal VOC data set is expected to reside in JPEG files located in the
+The raw KITTI data set is expected to reside in JPEG files located in the
 directory 'image_2'. Similarly, bounding box annotations are supposed to be
 stored in the 'label_2'
 
@@ -58,6 +58,12 @@ from datasets.kitti_common import KITTI_LABELS
 
 DEFAULT_IMAGE_DIR = 'image_2/'
 DEFAULT_LABEL_DIR = 'label_2/'
+
+# The number of images in the validation set.
+NUM_VALIDATION = 749  # about 10% of the entire training set
+
+# Seed for repeatability.
+RANDOM_SEED = 123
 
 
 def _png_image_shape(image_data, sess, decoded_png, inputs):
@@ -202,7 +208,7 @@ def _get_output_filename(output_dir, name):
     return '%s/%s.tfrecord' % (output_dir, name)
 
 
-def run(dataset_dir, output_dir, name='kitti_train', shuffling=False):
+def run(dataset_dir, output_dir, name='kitti_train', shuffling=True, need_validation_split=False):
     """Runs the conversion operation.
 
     Args:
@@ -219,8 +225,9 @@ def run(dataset_dir, output_dir, name='kitti_train', shuffling=False):
     # Dataset filenames, and shuffling.
     path = os.path.join(dataset_dir, DEFAULT_IMAGE_DIR)
     filenames = sorted(os.listdir(path))
+
     if shuffling:
-        random.seed(12345)
+        random.seed(RANDOM_SEED)
         random.shuffle(filenames)
 
     # PNG decoding.
@@ -228,13 +235,42 @@ def run(dataset_dir, output_dir, name='kitti_train', shuffling=False):
     decoded_png = tf.image.decode_png(inputs)
     with tf.Session() as sess:
 
-        # Process dataset files.
-        with tf.python_io.TFRecordWriter(tf_filename) as tfrecord_writer:
-            for i, filename in enumerate(filenames):
-                sys.stdout.write('\r>> Converting image %d/%d' % (i+1, len(filenames)))
-                sys.stdout.flush()
+        if need_validation_split:
+            # Process dataset files (train and validation)
+            training_filenames = filenames[NUM_VALIDATION:]
+            validation_filenames = filenames[:NUM_VALIDATION]
 
-                name = filename[:-4]
-                _add_to_tfrecord(dataset_dir, name, tfrecord_writer,
-                                 lambda x: _png_image_shape(x, sess, decoded_png, inputs))
-        print('\nFinished converting the KITTI dataset!')
+            with tf.python_io.TFRecordWriter(output_dir+'/kitti_train.tfrecord') as tfrecord_writer:
+                for i, filename in enumerate(training_filenames):
+                    sys.stdout.write('\r>> Converting image (Training) %d/%d' % (i+1, len(training_filenames)))
+                    sys.stdout.flush()
+
+                    name = filename[:-4]
+                    _add_to_tfrecord(dataset_dir, name, tfrecord_writer,
+                                     lambda x: _png_image_shape(x, sess, decoded_png, inputs))
+            print('\nFinished converting the KITTI dataset (Training)!')
+
+            with tf.python_io.TFRecordWriter(output_dir+'/kitti_validation.tfrecord') as tfrecord_writer:
+                for i, filename in enumerate(validation_filenames):
+                    sys.stdout.write('\r>> Converting image (Validation) %d/%d' % (i+1, len(validation_filenames)))
+                    sys.stdout.flush()
+
+                    name = filename[:-4]
+                    _add_to_tfrecord(dataset_dir, name, tfrecord_writer,
+                                     lambda x: _png_image_shape(x, sess, decoded_png, inputs))
+            print('\nFinished converting the KITTI dataset (Validation)!')
+
+        else:
+            # Process dataset files (full_train or test)
+            with tf.python_io.TFRecordWriter(tf_filename) as tfrecord_writer:
+                for i, filename in enumerate(filenames):
+                    sys.stdout.write('\r>> Converting image %d/%d' % (i+1, len(filenames)))
+                    sys.stdout.flush()
+
+                    name = filename[:-4]
+                    _add_to_tfrecord(dataset_dir, name, tfrecord_writer,
+                                     lambda x: _png_image_shape(x, sess, decoded_png, inputs))
+            print('\nFinished converting the KITTI dataset!')
+
+
+

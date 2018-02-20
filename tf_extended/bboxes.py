@@ -438,7 +438,7 @@ def bboxes_filter_labels(labels, bboxes,
       labels, bboxes: Filtered elements.
     """   
     with tf.name_scope(scope, 'bboxes_filter_labels', [labels, bboxes]):
-        mask = tf.greater_equal(labels, num_classes)
+        mask = tf.less(labels, num_classes)
         #for l in labels:
         #    mask = tf.logical_and(mask, tf.not_equal(labels, l))
         labels = tf.boolean_mask(labels, mask)

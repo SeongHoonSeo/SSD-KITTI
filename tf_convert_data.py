@@ -18,10 +18,11 @@ a TensorFlow pipeline.
 Usage:
 ```shell
 python tf_convert_data.py \
-    --dataset_name=pascalvoc \
-    --dataset_dir=/tmp/pascalvoc \
-    --output_name=pascalvoc \
-    --output_dir=/tmp/
+    --dataset_name=kitti \
+    --dataset_dir=/tmp/kitti/training \
+    --output_name=kitti_train \
+    --output_dir=/tmp/ \
+    --need_validation_split=True \ 
 ```
 """
 import tensorflow as tf
@@ -43,6 +44,9 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_string(
     'output_dir', './',
     'Output directory where to store TFRecords files.')
+tf.app.flags.DEFINE_string(
+    'need_validation_split', 'False',
+    'If true, splits the training dataset into train and validation set.')
 
 
 def main(_):
@@ -54,7 +58,10 @@ def main(_):
     if FLAGS.dataset_name == 'pascalvoc':
         pascalvoc_to_tfrecords.run(FLAGS.dataset_dir, FLAGS.output_dir, FLAGS.output_name)
     elif FLAGS.dataset_name == 'kitti':
-        kitti_to_tfrecords.run(FLAGS.dataset_dir, FLAGS.output_dir, FLAGS.output_name)
+        if FLAGS.need_validation_split == 'True':
+            kitti_to_tfrecords.run(dataset_dir=FLAGS.dataset_dir, output_dir=FLAGS.output_dir, name=FLAGS.output_name, need_validation_split=True)
+        else:
+            kitti_to_tfrecords.run(dataset_dir=FLAGS.dataset_dir, output_dir=FLAGS.output_dir, name=FLAGS.output_name, need_validation_split=False)    
     else:
         raise ValueError('Dataset [%s] was not recognized.' % FLAGS.dataset_name)
 
