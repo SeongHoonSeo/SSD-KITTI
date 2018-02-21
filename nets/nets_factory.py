@@ -18,34 +18,36 @@
 import functools
 import tensorflow as tf
 
-# from nets import inception
-# from nets import overfeat
-# from nets import resnet_v1
-# from nets import resnet_v2
-from nets import vgg
-# from nets import xception
-
 from nets import ssd_vgg_300
+from nets import ssd_vgg_384x1280
+from nets import ssd_vgg_384x1280_AnchorIncrease
+from nets import ssd_vgg_384x1280_modified
+from nets import ssd_vgg_384x640
+
 
 slim = tf.contrib.slim
 
-networks_map = {'vgg_a': vgg.vgg_a,
-                'vgg_16': vgg.vgg_16,
-                'vgg_19': vgg.vgg_19,
-                'ssd_300_vgg': ssd_vgg_300.ssd_net,
-                'ssd_300_vgg_caffe': ssd_vgg_300.ssd_net,
+networks_map = {'ssd_vgg_300': ssd_vgg_300.ssd_net,
+                'ssd_vgg_384x1280': ssd_vgg_384x1280.ssd_net,
+                'ssd_vgg_384x1280_AnchorIncrease': ssd_vgg_384x1280_AnchorIncrease.ssd_net,
+                'ssd_vgg_384x1280_modified': ssd_vgg_384x1280_modified.ssd_net, 
+                'ssd_vgg_384x640': ssd_vgg_384x640.ssd_net,
+
                 }
 
-arg_scopes_map = {'vgg_a': vgg.vgg_arg_scope,
-                  'vgg_16': vgg.vgg_arg_scope,
-                  'vgg_19': vgg.vgg_arg_scope,
-                  'ssd_300_vgg': ssd_vgg_300.ssd_arg_scope,
-                  'ssd_300_vgg_caffe': ssd_vgg_300.ssd_arg_scope_caffe,
+arg_scopes_map = {'ssd_vgg_300': ssd_vgg_300.ssd_arg_scope,
+                  'ssd_vgg_384x1280': ssd_vgg_384x1280.ssd_arg_scope,
+                  'ssd_vgg_384x1280_AnchorIncrease': ssd_vgg_384x1280_AnchorIncrease.ssd_arg_scope,
+                  'ssd_vgg_384x1280_modified': ssd_vgg_384x1280_modified.ssd_arg_scope,
+                  'ssd_vgg_384x640': ssd_vgg_384x640.ssd_arg_scope,
                   }
 
-networks_obj = {'ssd_300_vgg': ssd_vgg_300.SSDNet,
+networks_obj = {'ssd_vgg_300': ssd_vgg_300.SSDNet,
+                'ssd_vgg_384x1280': ssd_vgg_384x1280.SSDNet,
+                'ssd_vgg_384x1280_AnchorIncrease': ssd_vgg_384x1280_AnchorIncrease.SSDNet,
+                'ssd_vgg_384x1280_modified': ssd_vgg_384x1280_modified.SSDNet,
+                'ssd_vgg_384x640': ssd_vgg_384x640.SSDNet,
                 }
-
 
 def get_network(name):
     """Get a network object from a name.

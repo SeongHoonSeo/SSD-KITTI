@@ -85,7 +85,7 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_string(
     'dataset_dir', None, 'The directory where the dataset files are stored.')
 tf.app.flags.DEFINE_string(
-    'model_name', 'ssd_300_vgg', 'The name of the architecture to evaluate.')
+    'model_name', 'ssd_vgg_300', 'The name of the architecture to evaluate.')
 tf.app.flags.DEFINE_string(
     'preprocessing_name', None, 'The name of the preprocessing to use. If left '
     'as `None`, then the model_name flag is used.')
@@ -258,7 +258,7 @@ def main(_):
                 v = tfe.average_precision_voc07(prec, rec)
                 summary_name = 'AP_VOC07/%s' % c
                 op = tf.summary.scalar(summary_name, v, collections=[])
-                # op = tf.Print(op, [v], summary_name)
+                op = tf.Print(op, [v], summary_name)
                 tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
                 aps_voc07[c] = v
 
@@ -266,7 +266,7 @@ def main(_):
                 v = tfe.average_precision_voc12(prec, rec)
                 summary_name = 'AP_VOC12/%s' % c
                 op = tf.summary.scalar(summary_name, v, collections=[])
-                # op = tf.Print(op, [v], summary_name)
+                op = tf.Print(op, [v], summary_name)
                 tf.add_to_collection(tf.GraphKeys.SUMMARIES, op)
                 aps_voc12[c] = v
 

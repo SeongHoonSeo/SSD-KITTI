@@ -42,7 +42,6 @@ BBOX_CROP_OVERLAP = 0.5        # Minimum overlap to keep a bbox after cropping.
 CROP_RATIO_RANGE = (0.8, 1.2)  # Distortion ratio during cropping.
 MIN_OBJECT_COVERED = 0.3       # An optional `float`. Defaults to `0.1`. The cropped area of the image must contain
                                # at least this fraction of any bounding box supplied.
-EVAL_SIZE = (300, 300)         # Input of the network
 
 def tf_image_whitened(image, means=[_R_MEAN, _G_MEAN, _B_MEAN]):
     """Subtracts the given means from each image channel.
@@ -293,7 +292,7 @@ def preprocess_for_train(image, labels, bboxes, out_shape, data_format='NHWC',
         return image, labels, bboxes
 
 
-def preprocess_for_eval(image, labels, bboxes, out_shape=EVAL_SIZE, 
+def preprocess_for_eval(image, labels, bboxes, out_shape, 
                         data_format='NHWC', resize=Resize.WARP_RESIZE,
                         scope='ssd_preprocessing_train'):
     """Preprocess an image for evaluation.

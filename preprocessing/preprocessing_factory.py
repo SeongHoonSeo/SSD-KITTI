@@ -45,14 +45,30 @@ def get_preprocessing(name, is_training=False):
       ValueError: If Preprocessing `name` is not recognized.
     """
     preprocessing_fn_map = {
-        'ssd_300_vgg': ssd_vgg_preprocessing,
+        'ssd_vgg_300': ssd_vgg_preprocessing,
+        'ssd_vgg_384x1280': ssd_vgg_preprocessing,
+        'ssd_vgg_384x1280_AnchorIncrease': ssd_vgg_preprocessing,
+        'ssd_vgg_384x1280_modified' : ssd_vgg_preprocessing,
+        'ssd_vgg_384x640': ssd_vgg_preprocessing,
         'ssd_512_vgg': ssd_vgg_preprocessing,
     }
 
     if name not in preprocessing_fn_map:
         raise ValueError('Preprocessing name [%s] was not recognized' % name)
 
-    def preprocessing_fn(image, labels, bboxes, out_shape, data_format='NHWC', **kwargs):
+    out_shape = (300, 300)
+    if name == 'ssd_vgg_300':
+        out_shape = (300, 300)
+    elif name == 'ssd_vgg_384x1280':
+        out_shape = (384, 1280)
+    elif name == 'ssd_vgg_384x1280_AnchorIncrease':
+        out_shape = (384, 1280)
+    elif name == 'ssd_vgg_384x1280_modified':
+        out_shape = (384, 1280)
+    elif name == 'ssd_vgg_384x640':
+        out_shape = (384, 640)
+
+    def preprocessing_fn(image, labels, bboxes, out_shape=out_shape, data_format='NHWC', **kwargs):
         return preprocessing_fn_map[name].preprocess_image(
             image, labels, bboxes, out_shape, data_format=data_format, is_training=is_training, **kwargs)
     return preprocessing_fn
