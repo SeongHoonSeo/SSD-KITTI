@@ -103,8 +103,7 @@ To add your own model of SSD,
 
 `train_dir`: directory where the trained model will be saved  
 `dataset_dir`: directory where the kitti_train.tfrecord (or kitti_full_train.tfrecord) file is located  
-`checkpoint_path`: directory where the pretrained model is located  
-(ssd_model.ckpt is the model pretrained on PASAL VOC dataset)  
+`checkpoint_path`: directory where the pretrained model is located (ssd_model.ckpt is the model pretrained on PASAL VOC dataset)  
 `checkpoint_exclude_scopes`: filters where pretrained weights are NOT applied  
 `dataset_split_name`: train or full_train (full_train consists of all 7481 training images without validation split)  
 `model_name`: name of the SSD model (choose from 2. or select your own!)
@@ -223,13 +222,23 @@ In general, preserving the original resolution results in higher detection accur
 ```
 
 ## Milestones
+
 2018.02.12: [Fixed syntax errors and enabled training](https://github.com/seonghoon247/SSD-KITTI/commit/b080149b98e07f80d982a66137bcee374d2dd8a2)  
 2018.02.13: [Update outdated code by referencing balancap/tensorflow repo](https://github.com/seonghoon247/SSD-KITTI/commit/222194ee0241bc5f8fa00a331cf52742084df554)  
 2018.02.14: [Implemented evaluation code for KITTI](https://github.com/seonghoon247/SSD-KITTI/commit/c7ae332b036ca5ef9225b6b6c7befdf0e8921273)  
 2018.02.19: [Fixed num_class to 9 and removed don't-care labels from training](https://github.com/seonghoon247/SSD-KITTI/commit/fc6efe53d4d9b6259b92100ada85ca6d59f8e525)  
-2018.02.20: [Implemented train/validation split](https://github.com/seonghoon247/SSD-KITTI/commit/79f53d6f45a5480bbc7d2b72a04fdd909c71ffee)
-2018.02.21: [Modify the codes to enable train/test on various models]
-## Future Works
-1. 
+2018.02.20: [Implemented train/validation split](https://github.com/seonghoon247/SSD-KITTI/commit/79f53d6f45a5480bbc7d2b72a04fdd909c71ffee)  
+2018.02.21: [Modify the codes to enable train/test on various models](https://github.com/seonghoon247/SSD-KITTI/commit/5ac0124316aa6a33c7972082b73cd796fbf48c24)  
 
-2. 
+## Future Works
+1. Further Understanding and Refactoring of the Codes (Some outdated codes are still mixed)
+
+2. Find out why training losses are high despite of seemingly "correct" detection accuracy
+
+3. Further modify SSD network, including modification of filter sizes or 'feature pyramids'
+
+4. Further Explore tradeoff between detection time and accuracy
+
+## To end...
+
+This project is done by [Seong Hoon Seo](https://github.com/seonghoon247) and [GeonSeok Seo](https://github.com/geonseoks) with grateful advice and help from JisooJeong
