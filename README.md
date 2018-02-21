@@ -241,4 +241,4 @@ In general, preserving the original resolution results in higher detection accur
 
 ## To end...
 
-This project is done by [Seong Hoon Seo](https://github.com/seonghoon247) and [GeonSeok Seo](https://github.com/geonseoks) with grateful advice and help from JisooJeong
+This project is done by [Seong Hoon Seo](https://github.com/seonghoon247) and [GeonSeok Seo](https://github.com/geonseoks) with grateful advice and help from JiSoo Jeong.
