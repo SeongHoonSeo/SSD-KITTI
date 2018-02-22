@@ -4,7 +4,7 @@ deployment/__pycache__/
 nets/__pycache__/
 preprocessing/__pycache__/
 tf_extended/__pycache__/
-models/
+trained_models/
 eval/
 .ipynb_checkpoints/
 notebooks/.ipynb_checkpoints/
